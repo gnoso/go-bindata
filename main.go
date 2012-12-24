@@ -35,12 +35,21 @@ func main() {
 				return err
 			}
 
-			if !info.IsDir() && info.Name() != ".DS_Store" {
-				fmt.Fprintf(os.Stderr, "[i] translating file %s\n", path)
-				err = translate_file(path)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "[e] %s\n", err)
-					return err
+			if !info.IsDir() && info.Name()[0] != '.' {
+
+				funcName := genFunctionName(strings.Replace(path, *dir+string(filepath.Separator), "", -1))
+				outfile := filepath.Join(*out, funcName+".go")
+
+				// does output file already exist
+				outFi, err := os.Stat(outfile)
+				if err != nil || outFi.ModTime().Sub(info.ModTime()).Nanoseconds() < 0 {
+					fmt.Fprintf(os.Stderr, "[i] translating file %s\n", path)
+
+					err = translate_file(path, outfile, funcName)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "[e] %s\n", err)
+						return err
+					}
 				}
 			}
 			return nil
@@ -54,10 +63,7 @@ func main() {
 	fmt.Fprintln(os.Stdout, "[i] Done.")
 }
 
-func translate_file(infile string) error {
-
-	funcName := genFunctionName(strings.Replace(infile, *dir+"/", "", -1))
-	outfile := *out + "/" + funcName + ".go"
+func translate_file(infile string, outfile string, funcName string) error {
 
 	fs, err := os.Open(infile)
 	if err != nil {
@@ -90,6 +96,6 @@ func genFunctionName(filename string) string {
 		funcName = "_" + funcName
 	}
 
-	funcName = "E_" + funcName
+	funcName = funcName
 	return funcName
 }
