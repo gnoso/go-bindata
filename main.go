@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -37,15 +38,16 @@ func main() {
 
 			if !info.IsDir() && info.Name()[0] != '.' {
 
-				funcName := genFunctionName(strings.Replace(path, *dir+string(filepath.Separator), "", -1))
+				inpath := strings.Replace(path, *dir+string(filepath.Separator), "", -1)
+				funcName := genFunctionName(inpath)
 				outfile := filepath.Join(*out, funcName+".go")
 
-				// does output file already exist
+				// Only do translation if output file is out of date
 				outFi, err := os.Stat(outfile)
 				if err != nil || outFi.ModTime().Sub(info.ModTime()).Nanoseconds() < 0 {
 					fmt.Fprintf(os.Stderr, "[i] translating file %s\n", path)
 
-					err = translate_file(path, outfile, funcName)
+					err = translate_file(path, outfile, funcName, inpath)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "[e] %s\n", err)
 						return err
@@ -60,10 +62,25 @@ func main() {
 		return
 	}
 
-	fmt.Fprintln(os.Stdout, "[i] Done.")
+	err = write_boilerplate(*out, *pkgname)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[e] %s\n", err)
+		return
+	}
 }
 
-func translate_file(infile string, outfile string, funcName string) error {
+func write_boilerplate(outputDir, pkgName string) error {
+	bp := fmt.Sprintf(`package %s
+				var EmbeddedFiles map[string]func() []byte = make(map[string]func() []byte, 0)`, pkgName)
+
+	if _, err := os.Stat(filepath.Join(outputDir, "boilerplate.go")); err != nil {
+		return ioutil.WriteFile(filepath.Join(outputDir, "boilerplate.go"), []byte(bp), os.ModePerm)
+	}
+	return nil
+
+}
+
+func translate_file(infile string, outfile string, funcName string, inpath string) error {
 
 	fs, err := os.Open(infile)
 	if err != nil {
@@ -79,7 +96,7 @@ func translate_file(infile string, outfile string, funcName string) error {
 
 	defer fd.Close()
 
-	translate(fs, fd, *pkgname, funcName, *uncompressed, *nomemcopy)
+	translate(fs, fd, *pkgname, funcName, inpath, *uncompressed, *nomemcopy)
 	return nil
 }
 

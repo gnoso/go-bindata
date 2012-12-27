@@ -11,7 +11,7 @@ import (
 )
 
 // input -> gzip -> gowriter -> output.
-func translate_memcpy_comp(input io.Reader, output io.Writer, pkgname, funcname string) {
+func translate_memcpy_comp(input io.Reader, output io.Writer, pkgname, funcname, pathname string) {
 	fmt.Fprintf(output, `package %s
 
 import (
@@ -20,9 +20,13 @@ import (
 	"io"
 )
 
+func init() {
+	EmbeddedFiles["%s"] = %s
+}
+
 // %s returns raw, uncompressed file data.
 func %s() []byte {
-	gz, err := gzip.NewReader(bytes.NewBuffer([]byte{`, pkgname, funcname, funcname)
+	gz, err := gzip.NewReader(bytes.NewBuffer([]byte{`, pkgname, pathname, funcname, funcname, funcname)
 
 	gz := gzip.NewWriter(&ByteWriter{Writer: output})
 	io.Copy(gz, input)

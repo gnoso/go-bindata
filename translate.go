@@ -7,7 +7,7 @@ package main
 import "io"
 
 // translate translates the input file to go source code.
-func translate(input io.Reader, output io.Writer, pkgname, funcname string, uncompressed, nomemcpy bool) {
+func translate(input io.Reader, output io.Writer, pkgname, funcname, pathname string, uncompressed, nomemcpy bool) {
 	if nomemcpy {
 		if uncompressed {
 			translate_nomemcpy_uncomp(input, output, pkgname, funcname)
@@ -18,7 +18,7 @@ func translate(input io.Reader, output io.Writer, pkgname, funcname string, unco
 		if uncompressed {
 			translate_memcpy_uncomp(input, output, pkgname, funcname)
 		} else {
-			translate_memcpy_comp(input, output, pkgname, funcname)
+			translate_memcpy_comp(input, output, pkgname, funcname, pathname)
 		}
 	}
 }
